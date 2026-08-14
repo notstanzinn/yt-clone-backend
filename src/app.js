@@ -15,7 +15,10 @@ app.use(express.urlencoded()) // to aceept data from url
 app.use(express.static("public")) // to store data in server only, like we have a public folder in this backend directory
 app.use(cookieParser())
 
+//routes import
+import userRouter from "./routes/user.routes.js"
 
-
+//routes declaration
+app.use("/api/v1/users", userRouter)
 
 export { app }
