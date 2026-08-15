@@ -16,6 +16,8 @@ const registerUser = asyncHandler( async (req,res) => {
     // check for user creation
     // return response
     const {username, email, fullname, password} = req.body
+
+    console.log(req.files)
     
     if(
         [fullname,email,username,password].some( (field) => { return field?.trim() === ""})
@@ -23,7 +25,7 @@ const registerUser = asyncHandler( async (req,res) => {
         throw new ApiError(401, "All fields are required!")
     }
 
-    const existedUser = User.find({
+    const existedUser = await User.findOne({
         $or : [{ username } , { email }] //find user with username or email
     })
 
@@ -32,8 +34,11 @@ const registerUser = asyncHandler( async (req,res) => {
     }
 
     //access avatar and coverImage from request
-    const avatarLocalPath = req.files?.avatar[0]?.path
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
+    const avatarLocalPath = req.files?.avatar[0]?.path;
+    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+    // console.log(avatarLocalPath)
+    // console.log(coverImageLocalPath)
 
     if(!avatarLocalPath){
         throw new ApiError(400,"Avatar file is required")
@@ -42,9 +47,13 @@ const registerUser = asyncHandler( async (req,res) => {
     const avatar = await uploadOnCloudinary(avatarLocalPath)
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
+    // console.log("before check")
+
     if(!avatar){
         throw new ApiError(400, "Avatar flie is required")
     }
+    
+    // console.log("after check")
 
     const user = await User.create({
         fullname : fullname,
