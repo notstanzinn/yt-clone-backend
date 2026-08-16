@@ -26,6 +26,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
         throw new ApiError(500, `something went wrong while generating refresh and access token: ${error}`)
     }
 }
+
 const registerUser = asyncHandler( async (req,res) => {
     //get user details from frontend
     //validation - {username, email, password} is not empty
@@ -248,5 +249,130 @@ const refreshAccessToken = asyncHandler ( async (req,res) => {
     
 })
 
-export {refreshAccessToken,registerUser, loginUser, logoutUser}
+const changeCurrentPassword = asyncHandler( async(req,res) => {
+    const {oldPassword, newPassword} = req.body
+    //user password change kar rha hai matlab user loggedin toh hai,
+    //humne middleware ka use kiya toh ab req.user se userId nikal sakte hai
+
+    const userId = req.user?._id
+
+    const user = await User.findById(userId)
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if(!isPasswordCorrect){
+        throw new ApiError(400, "Invalid old password")
+    }
+
+    user.password = newPassword
+    await user.save({ validateBeforeSave : false })
+
+    return res.status(200).json( new ApiResponse(200,"password changed successfully!"))
+
+})
+
+const getCurrentUser = asyncHandler( async (req,res) => {
+    const user = req.user
+    return res.status(200).json(new ApiResponse(200,user,"Current user fetched successfully"))
+})
+
+const updateAccountDetails = asyncHandler( async (req,res) => {
+    const {fullname, email} = req.body
+    if(!fullname && !email){
+        throw new ApiError(400,"All fields are required!")
+    }
+    const userId = req.user?._id
+    const user = await User.findByIdAndUpdate(
+        userId,
+        {
+            $set : {
+                fullname, email
+            }
+        },
+        {
+            new : true
+        }
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,user,"Account details updated successfully"))
+})
+
+const updateAvatar = asyncHandler( async(req,res) => {
+    // here we will have only one file in request thats why
+    //we'll use req.file and not req.files
+
+    const avatarLocalPath = req.file?.path
+    if(!avatarLocalPath){
+        throw new ApiError(400,"avatar file is missing")
+    }
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if(!avatar.url){
+        throw new ApiError(400,"Error while uploading the avatar on cloudinary")
+    }
+
+    //updating the db
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set : {
+                avatar : avatar.url
+            }
+        },
+        {
+            new : true
+        }
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,updatedUser,"Avatar updated successfully!"))
+
+})
+
+const updateCoverImage = asyncHandler( async(req,res) => {
+    // here we will have only one file in request thats why
+    //we'll use req.file and not req.files
+    
+    const coverImageLocalPath = req.file?.path
+    if(!coverImageLocalPath){
+        throw new ApiError(400,"coverImage file is missing")
+    }
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    if(!coverImage.url){
+        throw new ApiError(400,"Error while uploading the coverImage on cloudinary")
+    }
+
+    //updating the db
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set : {
+                coverImage : coverImage.url
+            }
+        },
+        {
+            new : true
+        }
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,updatedUser,"coverImage updated successfully!"))
+
+})
+
+export {
+    updateAvatar,
+    refreshAccessToken,
+    registerUser, 
+    loginUser, 
+    logoutUser, 
+    getCurrentUser, 
+    changeCurrentPassword,
+    updateCoverImage
+}
 
